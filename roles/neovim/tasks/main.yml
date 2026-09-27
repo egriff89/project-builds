@@ -1,0 +1,24 @@
+---
+- name: Install Dependencies
+  community.general.pacman:
+    name:
+      - base-devel
+      - cmake
+      - curl
+      - git
+      - ninja
+      - tree-sitter
+    state: latest
+  become: true
+
+- name: Clone Repo
+  ansible.builtin.git:
+    repo: "https://github.com/neovim/neovim"
+    dest: "{{ user_project_dir }}/repos/neovim"
+    single_branch: true
+    version: master
+    depth: 1
+  notify:
+    - Build
+    - Install
+    - Clean build artifacts

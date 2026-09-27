@@ -1,0 +1,38 @@
+---
+- name: Build Odin
+  community.general.make:
+    chdir: "{{ user_data_dir }}/Odin"
+    target: release-native
+
+- name: Symlink Odin
+  ansible.builtin.file:
+    src: "{{ user_data_dir }}/Odin/odin"
+    path: "{{ user_dir }}/.local/bin/odin"
+    state: link
+    force: true
+
+- name: Build OLS
+  ansible.builtin.command:
+    chdir: "{{ user_data_dir }}/ols"
+    cmd: "./build.sh"
+  changed_when: false
+
+- name: Symlink OLS
+  ansible.builtin.file:
+    src: "{{ user_data_dir }}/ols/ols"
+    path: "{{ user_dir }}/.local/bin/ols"
+    state: link
+    force: true
+
+- name: Build odinfmt
+  ansible.builtin.command:
+    chdir: "{{ user_data_dir }}/ols"
+    cmd: "./odinfmt.sh"
+  changed_when: false
+
+- name: Symlink odinfmt
+  ansible.builtin.file:
+    src: "{{ user_data_dir }}/ols/odinfmt"
+    path: "{{ user_dir }}/.local/bin/odinfmt"
+    state: link
+    force: true

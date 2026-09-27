@@ -1,0 +1,33 @@
+---
+# OpenSSL v1.0.0
+# Primarily for old DOS games that rely on `libssl.so.1.1.0`
+
+- name: Set facts
+  ansible.builtin.set_fact:
+    openssl_dir: "{{ user_project_dir }}/repos/openssl_1.0.0"
+    openssl_patch: "{{ role_path }}/files/fix-struct-termio.patch"
+
+- name: Clone Repo
+  ansible.builtin.git:
+    repo: "https://github.com/openssl/openssl.git"
+    dest: "{{ openssl_dir }}"
+    single_branch: true
+    version: OpenSSL_1_0_0-stable
+    depth: 1
+    force: true
+
+- name: Apply patch  # noqa: command-instead-of-module
+  ansible.builtin.command:
+    chdir: "{{ openssl_dir }}"
+    cmd: "git apply -v {{ openssl_patch }}"
+  changed_when: false
+
+- name: Configure
+  ansible.builtin.command:
+    chdir: "{{ openssl_dir }}"
+    cmd: "./config shared"
+  changed_when: false
+
+- name: Build
+  community.general.make:
+    chdir: "{{ openssl_dir }}"

@@ -1,0 +1,36 @@
+---
+- name: Build Projects
+  hosts: localhost
+  connection: local
+
+  pre_tasks:
+    - name: Set facts
+      ansible.builtin.set_fact:
+        user_dir: "{{ ansible_facts['user_dir'] }}"
+        user_config_dir: "{{ ansible_facts['user_dir'] }}/.config"
+        user_data_dir: "{{ ansible_facts['user_dir'] }}/.local/share"
+        user_project_dir: "{{ ansible_facts['user_dir'] }}/Projects"
+        nproc: "{{ ansible_facts['processor_nproc'] }}"
+      tags: always
+
+  roles:
+    - role: c3
+      tags: c3
+
+    - role: neovim
+      tags: nvim
+
+    - role: dwproton
+      tags: dwp
+
+    - role: odin
+      tags: odin
+
+    - role: jank
+      tags: jank
+
+    - role: openssl
+      tags: openssl
+
+    - role: guile_lsp
+      tags: guile

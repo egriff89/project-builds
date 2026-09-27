@@ -1,0 +1,117 @@
+---
+- name: Install dependencies
+  community.general.pacman:
+    name:
+      - cmake
+      - entr
+      - gcc
+      - git
+      - git-lfs
+      - libedit
+      - libffi
+      - libxml2
+      - ninja
+      - make
+      - pkg-config
+      - python3
+    state: latest
+  become: true
+
+- name: Set directory facts
+  ansible.builtin.set_fact:
+    jank_dirs:
+      root: "{{ user_data_dir }}/jank"
+      working: "{{ user_data_dir }}/jank/compiler+runtime"
+      build: "{{ user_data_dir }}/jank/compiler+runtime/build"
+      llvm: "{{ user_data_dir }}/jank/compiler+runtime/build/llvm-install/usr/local/bin"
+
+- name: Set configuration options
+  ansible.builtin.set_fact:
+    jank_config:
+      cc: "{{ jank_dirs.llvm }}/clang"
+      cxx: "{{ jank_dirs.llvm }}/clang++"
+      opts: "-GNinja -DCMAKE_BUILD_TYPE=Release -Djank_local_clang=on"
+
+- name: Clean repo
+  ansible.builtin.file:
+    dest: "{{ jank_dirs.root }}"
+    state: absent
+  when: "'clean' in ansible_run_tags"
+
+- name: Clone repo
+  ansible.builtin.git:
+    repo: "https://github.com/jank-lang/jank"
+    dest: "{{ jank_dirs.root }}"
+    version: main
+    depth: 1
+  register: jank_clone
+
+- name: Create build directory
+  ansible.builtin.file:
+    dest: "{{ jank_dirs.build }}"
+    state: directory
+    mode: "0755"
+
+- name: Update submodules # noqa: command-instead-of-module
+  ansible.builtin.command:
+    cmd: "git submodule update --init --recursive --recommend-shallow --depth 1 --jobs {{ nproc // 2 }}"
+    chdir: "{{ jank_dirs.root }}"
+  register: jank_submodule
+  changed_when: false
+
+- name: Check for local LLVM Install
+  ansible.builtin.stat:
+    path: "{{ jank_dirs.llvm }}"
+  register: jank_llvm
+
+- name: Clean build directory
+  ansible.builtin.command:
+    cmd: "rm -rf build/*"
+    chdir: "{{ jank_dirs.working }}"
+  when:
+    - jank_submodule.stdout != ""
+    - jank_llvm.stat.exists
+  changed_when: true
+
+- name: Build clang/LLVM
+  ansible.builtin.command:
+    cmd: "./bin/build-clang"
+    chdir: "{{ jank_dirs.working }}"
+  environment:
+    CC: clang
+    CXX: clang++
+  when: jank_submodule.stdout != "" or not jank_llvm.stat.exists
+  changed_when: true
+
+- name: Configure jank - Release
+  ansible.builtin.command:
+    cmd: "./bin/configure {{ jank_config.opts }}"
+    chdir: "{{ jank_dirs.working }}"
+  environment:
+    CC: "{{ jank_config.cc }}"
+    CXX: "{{ jank_config.cxx }}"
+  changed_when: true
+  register: jank_configure_status
+
+- name: Build jank
+  ansible.builtin.command:
+    cmd: "./bin/compile"
+    chdir: "{{ jank_dirs.working }}"
+  environment:
+    CC: "{{ jank_config.cc }}"
+    CXX: "{{ jank_config.cxx }}"
+  when:
+    - jank_configure_status is not skipped
+    - jank_configure_status is not failed
+  changed_when: true
+  register: jank_build_status
+
+- name: Symlink jank
+  ansible.builtin.file:
+    src: "{{ jank_dirs.build }}/jank"
+    dest: "{{ user_dir }}/.local/bin/jank"
+    state: link
+    force: true
+  when:
+    - jank_build_status is not skipped
+    - jank_build_status is success

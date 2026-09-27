@@ -1,0 +1,17 @@
+---
+- name: Build
+  community.general.make:
+    chdir: "{{ user_project_dir }}/repos/neovim"
+    params:
+      CMAKE_BUILD_TYPE: RelWithDebInfo
+
+- name: Install
+  community.general.make:
+    chdir: "{{ user_project_dir }}/repos/neovim"
+    target: install
+  become: true
+
+- name: Clean build artifacts
+  ansible.builtin.file:
+    path: "{{ user_project_dir }}/repos/neovim/build"
+    state: absent

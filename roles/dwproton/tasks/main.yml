@@ -1,0 +1,62 @@
+---
+- name: Set facts
+  ansible.builtin.set_fact:
+    dwproton_repo: "{{ user_project_dir }}/repos/dwproton"
+    dwproton_steam_compat_tools: "{{ user_dir }}/.steam/steam/compatibilitytools.d"
+    dwproton_container: podman
+
+- name: Clone main repo
+  ansible.builtin.git:
+    repo: "https://dawn.wine/dawn-winery/dwproton"
+    dest: "{{ dwproton_repo }}"
+    clone: true
+    depth: 1
+    recursive: false  # skip submodules
+    version: main
+    force: true
+
+- name: Update submodules (shallow + parallel)  # noqa: command-instead-of-module
+  ansible.builtin.command:
+    cmd: "git submodule update --init --recursive --recommend-shallow --depth 1 --jobs {{ nproc // 2 }}"
+    chdir: "{{ dwproton_repo }}"
+  changed_when: false
+
+- name: Get version
+  ansible.builtin.shell: |
+    set -o pipefail
+    grep 'dwproton-' proton | awk -F'"' '{print $2}'
+  args:
+    chdir: "{{ dwproton_repo }}"
+  changed_when: false
+  register: dwproton_ver
+
+- name: Set version fact
+  ansible.builtin.set_fact:
+    dwproton_version: "{{ dwproton_ver.stdout }}"
+
+- name: Create build directory
+  ansible.builtin.file:
+    path: "{{ dwproton_repo }}/build"
+    state: directory
+    mode: "0755"
+
+- name: Configure
+  ansible.builtin.command:
+    chdir: "{{ dwproton_repo }}/build"
+    cmd: "../configure.sh --build-name={{ dwproton_version }}-local --container-engine={{ dwproton_container }} --enable-ccache --without-tts"
+  changed_when: false
+
+- name: Build
+  community.general.make:
+    chdir: "{{ dwproton_repo }}/build"
+    target: redist
+
+- name: Install to user's Steam installation path
+  ansible.builtin.unarchive:
+    src: "{{ dwproton_repo }}/build/{{ dwproton_version }}-local.tar.xz"
+    dest: "{{ dwproton_steam_compat_tools }}"
+
+- name: Clean build artifacts
+  ansible.builtin.file:
+    path: "{{ dwproton_repo }}/build"
+    state: absent

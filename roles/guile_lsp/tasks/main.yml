@@ -1,0 +1,76 @@
+---
+- name: Install Dependencies
+  community.general.pacman:
+    name:
+      - autoconf
+      - automake
+      - git
+      - guile
+    state: latest
+  become: true
+
+- name: Set facts
+  ansible.builtin.set_fact:
+    guile_lsp_repo: "{{ user_project_dir }}/repos/scheme-lsp-server"
+
+- name: Clone Repo
+  ansible.builtin.git:
+    repo: "https://codeberg.org/rgherdt/scheme-lsp-server.git"
+    dest: "{{ guile_lsp_repo }}"
+    single_branch: true
+    version: master
+    depth: 1
+    force: true
+  changed_when: false
+
+- name: Set Prefix fact
+  ansible.builtin.set_fact:
+    guile_lsp_prefix: "{{ user_data_dir }}/scheme-lsp-server"
+
+- name: Run install-deps.sh
+  ansible.builtin.command:
+    chdir: "{{ guile_lsp_repo }}/guile"
+    cmd: "./scripts/install-deps.sh --prefix={{ guile_lsp_prefix }}"
+  changed_when: false
+
+- name: Clean artifacts (ignore failure)
+  community.general.make:
+    chdir: "{{ guile_lsp_repo }}/guile"
+    target: distclean
+  changed_when: false
+  failed_when: false
+
+- name: Regenerate autotools
+  ansible.builtin.command:
+    chdir: "{{ guile_lsp_repo }}/guile"
+    cmd: autoreconf -f -i
+  changed_when: false
+
+- name: Configure
+  ansible.builtin.command:
+    chdir: "{{ guile_lsp_repo }}/guile"
+    cmd: "./configure --prefix={{ guile_lsp_prefix }}"
+  environment:
+    GUILE_LOAD_PATH: "{{ guile_lsp_prefix }}/share/guile/site/3.0"
+    GUILE_LOAD_COMPILED_PATH: "{{ guile_lsp_prefix }}/lib/guile/3.0/site-ccache"
+  changed_when: false
+
+- name: Build
+  community.general.make:
+    chdir: "{{ guile_lsp_repo }}/guile"
+  environment:
+    GUILE_LOAD_PATH: "{{ guile_lsp_prefix }}/share/guile/site/3.0"
+    GUILE_LOAD_COMPILED_PATH: "{{ guile_lsp_prefix }}/lib/guile/3.0/site-ccache"
+
+- name: Install
+  community.general.make:
+    chdir: "{{ guile_lsp_repo }}/guile"
+    target: install
+  environment:
+    GUILE_LOAD_PATH: "{{ guile_lsp_prefix }}/share/guile/site/3.0"
+    GUILE_LOAD_COMPILED_PATH: "{{ guile_lsp_prefix }}/lib/guile/3.0/site-ccache"
+  changed_when: false
+
+- name: Include shell config tasks
+  ansible.builtin.include_tasks: config_shell.yml
+  when: "'config' in ansible_run_tags"

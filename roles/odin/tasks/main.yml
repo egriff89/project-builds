@@ -1,0 +1,22 @@
+---
+- name: Install Dependencies
+  community.general.pacman:
+    name:
+      - llvm
+      - clang
+    state: latest
+  become: true
+
+- name: Clone repo
+  ansible.builtin.git:
+    repo: "https://github.com/odin-lang/Odin"
+    dest: "{{ user_data_dir }}/Odin"
+    version: master
+    depth: 1
+  notify:
+    - Build Odin
+    - Symlink Odin
+
+- name: LSP
+  ansible.builtin.include_tasks: ols.yml
+  when: "'lsp' in ansible_run_tags"

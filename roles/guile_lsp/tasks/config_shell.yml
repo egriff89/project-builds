@@ -1,0 +1,24 @@
+---
+- name: Add guile-lsp config to shell config
+  ansible.builtin.blockinfile:
+    path: "{{ guile_lsp_shell_configs[guile_lsp_user_shell] }}"
+    marker: "# {mark} ANSIBLE MANAGED BLOCK - guile-lsp"
+    block: |
+      {% if guile_lsp_user_shell == 'fish' %}
+      set -x GUILE_LOAD_PATH "{{ guile_lsp_prefix }}/scheme-lsp-server/share/guile/site/3.0"
+      set -x GUILE_LOAD_COMPILED_PATH "{{ guile_lsp_prefix }}/scheme-lsp-server/lib/guile/3.0/site-ccache"
+      fish_add_path "{{ guile_lsp_prefix }}/scheme-lsp-server/bin"
+      {% elif guile_lsp_user_shell in ('zsh', 'bash') %}
+      export GUILE_LOAD_PATH="{{ guile_lsp_prefix }}/scheme-lsp-server/share/guile/site/3.0"
+      export GUILE_LOAD_COMPILED_PATH="{{ guile_lsp_prefix }}/scheme-lsp-server/lib/guile/3.0/site-ccache"
+      export PATH="{{ guile_lsp_prefix }}/scheme-lsp-server/bin":$PATH
+      {% endif %}
+    create: true
+    mode: "0644"
+  vars:
+    guile_lsp_user_shell: "{{ ansible_facts['user_shell'] | basename }}"
+    guile_lsp_shell_configs:
+      fish: "{{ user_config_dir }}/fish/config.fish"
+      bash: "{{ user_dir }}/.bashrc"
+      zsh: "{{ user_dir }}/.zshrc"
+  when: "guile_lsp_user_shell in guile_lsp_shell_configs"

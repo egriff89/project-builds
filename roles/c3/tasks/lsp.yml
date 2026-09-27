@@ -1,0 +1,22 @@
+---
+- name: Clone repo
+  ansible.builtin.git:
+    repo: "https://github.com/tonis2/lsp"
+    dest: "{{ c3_lsp_dir }}"
+    version: main
+    depth: 1
+    force: true
+  register: c3_lsp_clone
+
+- name: Build LSP
+  ansible.builtin.command:
+    cmd: "{{ user_dir }}/.local/bin/c3c build lsp"
+    chdir: "{{ c3_lsp_dir }}"
+  changed_when: true
+
+- name: Symlink C3 LSP
+  ansible.builtin.file:
+    dest: "{{ user_dir }}/.local/bin/c3-lsp"
+    src: "{{ c3_lsp_dir }}/build/lsp"
+    state: link
+    force: true

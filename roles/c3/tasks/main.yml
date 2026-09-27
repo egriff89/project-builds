@@ -1,0 +1,45 @@
+---
+- name: Install dependencies
+  community.general.pacman:
+    name:
+      - clang
+      - cmake
+      - curl
+      - git
+    state: latest
+  become: true
+
+- name: Set facts
+  ansible.builtin.set_fact:
+    c3_dir: "{{ user_data_dir }}/c3c"
+    c3_build_dir: "{{ user_data_dir }}/c3c/build"
+    c3_lsp_dir: "{{ user_project_dir }}/repos/c3-lsp"
+    c3_binary: "{{ user_dir }}/.local/bin/c3c"
+
+- name: Clone the repo
+  ansible.builtin.git:
+    repo: "https://github.com/c3lang/c3c"
+    dest: "{{ c3_dir }}"
+    version: master
+    depth: 1
+    force: true
+  notify:
+    - Configure CMake
+    - Build compiler
+    - Symlink compiler
+
+- name: Check for build dir
+  ansible.builtin.stat:
+    dest: "{{ c3_build_dir }}"
+  register: c3_build
+
+- name: Create build dir
+  ansible.builtin.file:
+    dest: "{{ c3_build_dir }}"
+    state: directory
+    mode: "0755"
+  when: not c3_build.stat.exists
+
+- name: Import LSP tasks
+  ansible.builtin.include_tasks: lsp.yml
+  when: "'lsp' in ansible_run_tags"

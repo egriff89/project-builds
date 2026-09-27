@@ -1,0 +1,19 @@
+---
+- name: Configure CMake
+  ansible.builtin.command:
+    cmd: cmake -B build -S . -DC3_FETCH_LLVM=ON -DCMAKE_BUILD_TYPE=Release
+    chdir: "{{ c3_dir }}"
+  changed_when: true
+
+- name: Build compiler
+  community.general.make:
+    chdir: "{{ c3_build_dir }}"
+    jobs: "{{ nproc }}"
+    target: all
+
+- name: Symlink compiler
+  ansible.builtin.file:
+    src: "{{ c3_build_dir }}/c3c"
+    dest: "{{ c3_binary }}"
+    state: link
+    force: true

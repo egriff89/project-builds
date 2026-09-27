@@ -1,0 +1,14 @@
+---
+- name: Clone OLS repo
+  ansible.builtin.git:
+    repo: "https://github.com/DanielGavin/ols"
+    dest: "{{ user_data_dir }}/ols"
+    clone: true
+    version: master
+    depth: 1
+    force: true
+  notify:
+    - Build OLS
+    - Symlink OLS
+    - Build odinfmt
+    - Symlink odinfmt
