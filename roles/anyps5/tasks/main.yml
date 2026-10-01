@@ -3,14 +3,14 @@
 
 - name: Set build facts
   ansible.builtin.set_fact:
-    anyps5_repo: "boykopovar/AnyPS5"
     anyps5_dirs:
       root: "{{ user_project_dir }}/repos/AnyPS5"
       build: "{{ user_project_dir }}/repos/AnyPS5/build"
+      install: "{{ user_dir }}/.local/bin"
 
 - name: Get latest release
   ansible.builtin.uri:
-    url: "https://api.github.com/repos/{{ anyps5_repo }}/releases/latest"
+    url: "https://api.github.com/repos/boykopovar/AnyPS5/releases/latest"
     headers:
       Content-Type: application/json
   register: anyps5_latest_release
@@ -57,3 +57,9 @@
       community.general.make:
         chdir: "{{ anyps5_dirs.build }}"
         jobs: "{{ nproc // 2 }}"
+
+- name: Install relinker to {{ anyps5_dirs.install }}
+  ansible.builtin.copy:
+    src: "{{ anyps5_dirs.build }}/core/relinker/relinker"
+    dest: "{{ anyps5_dirs.install }}/relinker"
+    mode: "0755"
