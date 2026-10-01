@@ -34,3 +34,6 @@
 
     - role: guile_lsp
       tags: guile
+
+    - role: anyps5
+      tags: anyps5

@@ -1,0 +1,59 @@
+---
+# Tool for automatic porting of PS5 executables to Linux and Windows
+
+- name: Set build facts
+  ansible.builtin.set_fact:
+    anyps5_repo: "boykopovar/AnyPS5"
+    anyps5_dirs:
+      root: "{{ user_project_dir }}/repos/AnyPS5"
+      build: "{{ user_project_dir }}/repos/AnyPS5/build"
+
+- name: Get latest release
+  ansible.builtin.uri:
+    url: "https://api.github.com/repos/{{ anyps5_repo }}/releases/latest"
+    headers:
+      Content-Type: application/json
+  register: anyps5_latest_release
+
+- name: Set version fact
+  ansible.builtin.set_fact:
+    anyps5_latest: "{{ anyps5_latest_release.json.tag_name }}"
+
+- name: Clone repo
+  ansible.builtin.git:
+    repo: "https://github.com/boykopovar/AnyPS5"
+    dest: "{{ anyps5_dirs.root }}"
+    depth: 1
+    recursive: false
+    version: "{{ anyps5_latest }}"
+
+- name: Initialize submodules (shallow, parallel) # noqa: command-instead-of-module
+  ansible.builtin.command:
+    cmd: "git submodule update --init --recursive --recommend-shallow --depth 1 --jobs {{ nproc // 2 }}"
+    chdir: "{{ anyps5_dirs.root }}"
+  register: anyps5_submod_init
+  changed_when: false
+
+- name: Check for build directory
+  ansible.builtin.stat:
+    path: "{{ anyps5_dirs.build }}"
+  register: anyps5_build_dir
+
+- name: Clean build artifacts
+  community.general.make:
+    chdir: "{{ anyps5_dirs.build }}"
+    target: clean
+  when: anyps5_build_dir.stat.exists
+
+- name: Build
+  block:
+    - name: CMake
+      ansible.builtin.command:
+        chdir: "{{ anyps5_dirs.root }}"
+        cmd: "cmake -B build -S ."
+      changed_when: false
+
+    - name: Build SDL2 and relinker
+      community.general.make:
+        chdir: "{{ anyps5_dirs.build }}"
+        jobs: "{{ nproc // 2 }}"
