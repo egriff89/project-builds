@@ -1,6 +1,16 @@
 ---
 # Tool for automatic porting of PS5 executables to Linux and Windows
 
+- name: Install dependencies
+  ansible.builtin.package:
+    name:
+      - base-devel
+      - cmake
+      - git
+      - ninja
+    state: latest
+  become: true
+
 - name: Set build facts
   ansible.builtin.set_fact:
     anyps5_dirs:
@@ -40,23 +50,24 @@
   register: anyps5_build_dir
 
 - name: Clean build artifacts
-  community.general.make:
-    chdir: "{{ anyps5_dirs.build }}"
-    target: clean
+  ansible.builtin.file:
+    path: "{{ anyps5_dirs.build }}"
+    state: absent
   when: anyps5_build_dir.stat.exists
 
 - name: Build
   block:
-    - name: CMake
+    - name: CMake - Generate Ninja build files
       ansible.builtin.command:
         chdir: "{{ anyps5_dirs.root }}"
-        cmd: "cmake -B build -S ."
+        cmd: "cmake -B build -S . -G Ninja -DCMAKE_BUILD_TYPE=Release"
       changed_when: false
 
-    - name: Build SDL2 and relinker
-      community.general.make:
+    - name: CMake - Build
+      ansible.builtin.command:
         chdir: "{{ anyps5_dirs.build }}"
-        jobs: "{{ nproc // 2 }}"
+        cmd: "cmake --build ."
+      changed_when: false
 
 - name: Install relinker to {{ anyps5_dirs.install }}
   ansible.builtin.copy:
