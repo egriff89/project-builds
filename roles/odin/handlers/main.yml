@@ -3,6 +3,8 @@
   community.general.make:
     chdir: "{{ user_data_dir }}/Odin"
     target: release-native
+  environment:
+    LLVM_CONFIG: llvm-config-22
 
 - name: Symlink Odin
   ansible.builtin.file:

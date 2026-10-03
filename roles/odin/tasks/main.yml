@@ -2,7 +2,7 @@
 - name: Install Dependencies
   community.general.pacman:
     name:
-      - llvm
+      - llvm22
       - clang
     state: latest
   become: true
