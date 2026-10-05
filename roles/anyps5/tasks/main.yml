@@ -2,7 +2,7 @@
 # Tool for automatic porting of PS5 executables to Linux and Windows
 
 - name: Install dependencies
-  ansible.builtin.package:
+  community.general.pacman:
     name:
       - base-devel
       - cmake
