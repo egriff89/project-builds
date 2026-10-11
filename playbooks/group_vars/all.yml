@@ -1,0 +1,18 @@
+---
+roles_list:
+  - name: c3
+    tag: c3
+  - name: neovim
+    tag: nvim
+  - name: dwproton
+    tag: dwp
+  - name: odin
+    tag: odin
+  - name: jank
+    tag: jank
+  - name: openssl
+    tag: openssl
+  - name: guile_lsp
+    tag: guile
+  - name: anyps5
+    tag: anyps5
