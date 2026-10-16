@@ -83,28 +83,27 @@
   when: jank_submodule.stdout != "" or not jank_llvm.stat.exists
   changed_when: true
 
-- name: Configure jank - Release
-  ansible.builtin.command:
-    cmd: "./bin/configure {{ jank_config.opts }}"
-    chdir: "{{ jank_dirs.working }}"
+- name: Configure and build jank
   environment:
     CC: "{{ jank_config.cc }}"
     CXX: "{{ jank_config.cxx }}"
-  changed_when: true
-  register: jank_configure_status
+  block:
+    - name: Configure Release Build
+      ansible.builtin.command:
+        cmd: "./bin/configure {{ jank_config.opts }}"
+        chdir: "{{ jank_dirs.working }}"
+      changed_when: true
+      register: jank_configure_status
 
-- name: Build jank
-  ansible.builtin.command:
-    cmd: "./bin/compile"
-    chdir: "{{ jank_dirs.working }}"
-  environment:
-    CC: "{{ jank_config.cc }}"
-    CXX: "{{ jank_config.cxx }}"
-  when:
-    - jank_configure_status is not skipped
-    - jank_configure_status is not failed
-  changed_when: true
-  register: jank_build_status
+    - name: Build jank
+      ansible.builtin.command:
+        cmd: "./bin/compile"
+        chdir: "{{ jank_dirs.working }}"
+      when:
+        - jank_configure_status is not skipped
+        - jank_configure_status is not failed
+      changed_when: true
+      register: jank_build_status
 
 - name: Symlink jank
   ansible.builtin.file:
