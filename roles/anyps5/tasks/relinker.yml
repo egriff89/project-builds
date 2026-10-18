@@ -1,0 +1,28 @@
+---
+- name: Relinker Only - Set build directory
+  ansible.builtin.set_fact:
+    anyps5_dirs: "{{ anyps5_dirs | combine({'relinker': anyps5_dirs.root ~ '/build-relinker'}) }}"
+
+- name: Create relinker-only build directory
+  ansible.builtin.file:
+    path: "{{ anyps5_dirs.relinker }}"
+    state: directory
+    mode: '0755'
+
+- name: Relinker Only - Configure
+  ansible.builtin.command:
+    cmd: cmake -S . -B build-relinker -G Ninja -DCMAKE_BUILD_TYPE=Release -DANYPS5_RELINKER_ONLY=ON
+    chdir: "{{ anyps5_dirs.root }}"
+  changed_when: false
+
+- name: Relinker Only - Build
+  ansible.builtin.command:
+    cmd: cmake --build build-relinker --parallel
+    chdir: "{{ anyps5_dirs.root }}"
+  changed_when: false
+
+- name: Relinker Only - Install to {{ anyps5_dirs.install }}
+  ansible.builtin.copy:
+    src: "{{ anyps5_dirs.relinker }}/core/relinker/relinker"
+    dest: "{{ anyps5_dirs.install }}/relinker"
+    mode: "0755"

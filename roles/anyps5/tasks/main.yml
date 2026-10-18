@@ -36,41 +36,49 @@
     depth: 1
     recursive: false
     version: "{{ anyps5_latest }}"
+    force: true
 
-- name: Initialize submodules (shallow, parallel) # noqa: command-instead-of-module
-  ansible.builtin.command:
-    cmd: "git submodule update --init --recursive --recommend-shallow --depth 1 --jobs {{ nproc // 2 }}"
-    chdir: "{{ anyps5_dirs.root }}"
-  register: anyps5_submod_init
-  changed_when: false
+- name: Import tasks for relinker-only build
+  ansible.builtin.include_tasks: relinker.yml
+  when: "'relinker' in ansible_run_tags"
 
-- name: Check for build directory
-  ansible.builtin.stat:
-    path: "{{ anyps5_dirs.build }}"
-  register: anyps5_build_dir
-
-- name: Clean build artifacts
-  ansible.builtin.file:
-    path: "{{ anyps5_dirs.build }}"
-    state: absent
-  when: anyps5_build_dir.stat.exists
-
-- name: Build
+- name: Full Build
+  when: "'relinker' not in ansible_run_tags"
   block:
-    - name: CMake - Generate Ninja build files
+    - name: Initialize submodules (shallow, parallel) # noqa: command-instead-of-module
       ansible.builtin.command:
+        cmd: "git submodule update --init --recursive --recommend-shallow --depth 1 --jobs {{ nproc // 2 }}"
         chdir: "{{ anyps5_dirs.root }}"
-        cmd: "cmake -B build -S . -G Ninja -DCMAKE_BUILD_TYPE=Release"
+      register: anyps5_submod_init
       changed_when: false
 
-    - name: CMake - Build
-      ansible.builtin.command:
-        chdir: "{{ anyps5_dirs.build }}"
-        cmd: "cmake --build ."
-      changed_when: false
+    - name: Check for build directory
+      ansible.builtin.stat:
+        path: "{{ anyps5_dirs.build }}"
+      register: anyps5_build_dir
 
-- name: Install relinker to {{ anyps5_dirs.install }}
-  ansible.builtin.copy:
-    src: "{{ anyps5_dirs.build }}/core/relinker/relinker"
-    dest: "{{ anyps5_dirs.install }}/relinker"
-    mode: "0755"
+    - name: Clean build artifacts
+      ansible.builtin.file:
+        path: "{{ anyps5_dirs.build }}"
+        state: absent
+      when: anyps5_build_dir.stat.exists
+
+    - name: Build
+      block:
+        - name: CMake - Generate Ninja build files
+          ansible.builtin.command:
+            chdir: "{{ anyps5_dirs.root }}"
+            cmd: "cmake -B build -S . -G Ninja -DCMAKE_BUILD_TYPE=Release"
+          changed_when: false
+
+        - name: CMake - Build
+          ansible.builtin.command:
+            chdir: "{{ anyps5_dirs.build }}"
+            cmd: "cmake --build ."
+          changed_when: false
+
+    - name: Install relinker to {{ anyps5_dirs.install }}
+      ansible.builtin.copy:
+        src: "{{ anyps5_dirs.build }}/core/relinker/relinker"
+        dest: "{{ anyps5_dirs.install }}/relinker"
+        mode: "0755"
