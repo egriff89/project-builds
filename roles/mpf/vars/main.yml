@@ -1,0 +1,11 @@
+---
+# Original publish-nix.sh script copies programs into Avalonia and CLI only, hence no MPF.Check
+mpf_program_projects:
+  - MPF.Avalonia
+  - MPF.CLI
+
+mpf_dl_urls:
+  Aaru_linux-x64: "https://github.com/aaru-dps/Aaru/releases/download/v5.4.2/aaru-5.4.2_linux_amd64.tar.xz"
+  Creator_linux-x64: "https://github.com/user-attachments/files/24401509/DiscImageCreator_20260101.tar.gz"
+  Dreamdump_linux-x64: "https://codeberg.org/MoriGM/dreamdump/releases/download/0.6.0/dreamdump-_linux_amd64"
+  Redumper_linux-x64: "https://github.com/superg/redumper/releases/download/b749/redumper-b749-linux-x64.zip"

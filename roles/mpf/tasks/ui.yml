@@ -1,0 +1,14 @@
+---
+- name: Publish MPF.UI (Avalonia)
+  ansible.builtin.command:
+    cmd: >-
+      dotnet publish MPF.Avalonia/MPF.Avalonia.csproj
+      -f {{ mpf_framework }}
+      -r {{ mpf_runtime }}
+      -c Release
+      --self-contained true
+      -p:PublishSingleFile=true
+      -p:DebugType=None
+      -p:DebugSymbols=false
+    chdir: "{{ mpf_repo }}"
+  changed_when: false

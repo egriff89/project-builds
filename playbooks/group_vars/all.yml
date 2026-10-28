@@ -1,18 +1,29 @@
 ---
 roles_list:
+  # C3 Programming Language- https://github.com/c3lang/c3c
   - name: c3
     tag: c3
-  - name: neovim
-    tag: nvim
+  # DWProton - https://dawn.wine/dawn-winery/dwproton
   - name: dwproton
     tag: dwp
-  - name: odin
-    tag: odin
+  # jank Programming Language- https://github.com/jank-lang/jank
   - name: jank
     tag: jank
+  # Neovim - https://github.com/neovim/neovim
+  - name: neovim
+    tag: nvim
+  # Odin Programming Language- https://github.com/odin-lang/odin
+  - name: odin
+    tag: odin
+  # OpenSSL - https://github.com/openssl/openssl
   - name: openssl
     tag: openssl
+  # Scheme LSP Server - https://codeberg.org/rgherdt/scheme-lsp-server
   - name: guile_lsp
     tag: guile
+  # AnyPS5 - https://github.com/boykopovar/AnyPS5
   - name: anyps5
     tag: anyps5
+  # Media Preservation Frontend - https://github.com/SabreTools/MPF
+  - name: mpf
+    tag: mpf

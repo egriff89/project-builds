@@ -1,0 +1,178 @@
+---
+- name: Install dependencies
+  community.general.pacman:
+    name:
+      - extra/dotnet-sdk
+      - git
+      - wget
+      - zip
+    state: latest
+  become: true
+
+- name: Clone repo
+  ansible.builtin.git:
+    repo: "https://github.com/SabreTools/MPF.git"
+    dest: "{{ user_project_dir }}/repos/MPF"
+    single_branch: true
+    version: master
+    depth: 1
+
+- name: Set program download facts
+  ansible.builtin.set_fact:
+    mpf_repo: "{{ user_project_dir }}/repos/MPF"
+    mpf_runtime: linux-x64
+    mpf_framework: net10.0
+    mpf_dl_prefixes:
+      - Aaru
+      - Creator
+      - Dreamdump
+      - Redumper
+
+- name: Define how each program is unpacked
+  ansible.builtin.set_fact:
+    mpf_dl_extract:
+      Aaru:
+        type: archive
+        extra_opts: []
+      Creator:
+        type: archive
+        extra_opts:
+          - "--strip-components=1"
+      Dreamdump:
+        type: binary
+      Redumper:
+        type: archive
+        extra_opts:
+          - "-j"
+
+- name: Build program job list
+  vars:
+    _key: "{{ prefix ~ '_' ~ mpf_runtime }}"
+    _url: "{{ mpf_dl_urls[_key] | default('') }}"
+    _suffix: "{{ _url | basename | regex_search('\\.tar\\.[^.]+$|\\.[^.]+$') | default('', true) }}"
+  ansible.builtin.set_fact:
+    mpf_jobs: >-
+      {{ mpf_jobs | default([]) + [ {
+           'key': _key,
+           'prefix': prefix,
+           'url': _url,
+           'filename': _key ~ _suffix,
+           'extract': mpf_dl_extract[prefix]
+         } ] }}
+  loop: "{{ mpf_dl_prefixes }}"
+  loop_control:
+    loop_var: prefix
+
+- name: Drop programs without a download
+  ansible.builtin.set_fact:
+    mpf_jobs: "{{ mpf_jobs | selectattr('url', '!=', '') | list }}"
+
+# `publish-nix.sh` download_programs: stage, unpack, copy into publish/Programs, then clean up.
+
+- name: Create program staging directories
+  ansible.builtin.file:
+    path: "{{ mpf_repo }}/{{ stage.key }}-dir"
+    state: directory
+    mode: "0755"
+  loop: "{{ mpf_jobs }}"
+  loop_control:
+    loop_var: stage
+    label: "{{ stage.key }}"
+
+- name: Download MPF programs
+  ansible.builtin.get_url:
+    url: "{{ program.url }}"
+    dest: "{{ mpf_repo }}/{{ program.filename }}"
+    mode: "0644"
+  loop: "{{ mpf_jobs }}"
+  loop_control:
+    loop_var: program
+    label: "{{ program.key }}"
+
+- name: Extract program archives
+  ansible.builtin.unarchive:
+    src: "{{ mpf_repo }}/{{ program.filename }}"
+    dest: "{{ mpf_repo }}/{{ program.key }}-dir"
+    remote_src: true
+    extra_opts: "{{ program.extract.extra_opts }}"
+  loop: "{{ mpf_jobs }}"
+  loop_control:
+    loop_var: program
+    label: "{{ program.key }}"
+  when: program.extract.type == 'archive'
+
+- name: Install bare-binary programs
+  ansible.builtin.copy:
+    src: "{{ mpf_repo }}/{{ bin.filename }}"
+    dest: "{{ mpf_repo }}/{{ bin.key }}-dir/dreamdump"
+    remote_src: true
+    mode: "0755"
+  loop: "{{ mpf_jobs }}"
+  loop_control:
+    loop_var: bin
+    label: "{{ bin.key }}"
+  when: bin.extract.type == 'binary'
+
+- name: Import MPF.CLI tasks
+  ansible.builtin.include_tasks: cli.yml
+  when: "'cli' in ansible_run_tags"
+
+- name: Import MPF.Check tasks
+  ansible.builtin.include_tasks: check.yml
+  when: "'check' in ansible_run_tags"
+
+- name: Import MPF.UI tasks
+  ansible.builtin.include_tasks: ui.yml
+  when: "'ui' in ansible_run_tags"
+
+- name: Build program publish jobs
+  ansible.builtin.set_fact:
+    mpf_publish_jobs: >-
+      {{ mpf_publish_jobs | default([]) + [ {
+           'project': item.0,
+           'prefix': item.1.prefix,
+           'src': mpf_repo ~ '/' ~ item.1.key ~ '-dir/',
+           'dest': mpf_repo ~ '/' ~ item.0 ~ '/bin/Release/' ~ mpf_framework ~ '/' ~ mpf_runtime ~ '/publish/Programs/' ~ item.1.prefix ~ '/'
+         } ] }}
+  loop: "{{ mpf_program_projects | product(mpf_jobs) | list }}"
+  loop_control:
+    label: "{{ item.0 }}/{{ item.1.prefix }}"
+
+- name: Create program publish directories
+  ansible.builtin.file:
+    path: "{{ publish.dest }}"
+    state: directory
+    mode: "0755"
+  loop: "{{ mpf_publish_jobs }}"
+  loop_control:
+    loop_var: publish
+    label: "{{ publish.project }}/{{ publish.prefix }}"
+
+- name: Install programs into publish trees
+  ansible.builtin.copy:
+    src: "{{ publish.src }}"
+    dest: "{{ publish.dest }}"
+    remote_src: true
+    mode: preserve
+  loop: "{{ mpf_publish_jobs }}"
+  loop_control:
+    loop_var: publish
+    label: "{{ publish.project }}/{{ publish.prefix }}"
+
+- name: Remove program staging directories
+  ansible.builtin.file:
+    path: "{{ mpf_repo }}/{{ program.key }}-dir"
+    state: absent
+  loop: "{{ mpf_jobs }}"
+  loop_control:
+    loop_var: program
+    label: "{{ program.key }}"
+
+- name: Remove downloaded program archives
+  ansible.builtin.file:
+    path: "{{ mpf_repo }}/{{ program.filename }}"
+    state: absent
+  loop: "{{ mpf_jobs }}"
+  loop_control:
+    loop_var: program
+    label: "{{ program.filename }}"
