@@ -59,6 +59,6 @@
 
 - name: Create config
   ansible.builtin.template:
-    src: options-changes.j2
+    src: options-changes.txt.j2
     dest: "{{ tes_arena_dirs.config }}/options/options-changes.txt"
     mode: "0644"
