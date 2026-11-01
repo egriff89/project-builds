@@ -1,0 +1,64 @@
+---
+- name: Install Dependencies
+  community.general.pacman:
+    name:
+      - cmake
+      - git
+      - openal
+      - sdl2-compat
+      - spirv-tools
+      - vulkan-headers
+      - vulkan-icd-loader
+      - vulkan-tools
+      - vulkan-validation-layers
+      - wildmidi
+    state: latest
+  become: true
+
+- name: Set facts
+  ansible.builtin.set_fact:
+    tes_arena_dirs:
+      repo: "{{ user_project_dir }}/repos/OpenTESArena"
+      config: "{{ user_config_dir }}/OpenTESArena"
+    tes_arena_data_paths:
+      - data/ARENACD
+      - data/ARENA
+      - "{{ user_dir }}/Games/The Elder Scrolls/Arena Rebuilt/Arena"
+
+- name: Clone repository
+  ansible.builtin.git:
+    repo: "https://github.com/afritz1/OpenTESArena.git"
+    dest: "{{ tes_arena_dirs.repo }}"
+    single_branch: true
+    version: main
+    depth: 1
+
+- name: Check for build directory
+  ansible.builtin.stat:
+    path: "{{ tes_arena_dirs.repo }}/build"
+  register: tes_arena_build_dir
+
+- name: Make build directory
+  ansible.builtin.file:
+    path: "{{ tes_arena_dirs.repo }}/build"
+    state: directory
+    mode: "0755"
+  when: not tes_arena_build_dir.stat.exists
+
+- name: CMake
+  ansible.builtin.command:
+    cmd: cmake .. -DCMAKE_BUILD_TYPE=ReleaseNative
+    chdir: "{{ tes_arena_dirs.repo }}/build"
+  changed_when: true
+
+- name: Build
+  community.general.make:
+    chdir: "{{ tes_arena_dirs.repo }}/build"
+    jobs: "{{ nproc // 2 }}"
+  changed_when: true
+
+- name: Create config
+  ansible.builtin.template:
+    src: options-changes.j2
+    dest: "{{ tes_arena_dirs.config }}/options/options-changes.txt"
+    mode: "0644"

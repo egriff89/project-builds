@@ -27,3 +27,6 @@ roles_list:
   # Media Preservation Frontend - https://github.com/SabreTools/MPF
   - name: mpf
     tag: mpf
+  # OpenTESArena - https://github.com/afritz1/OpenTESArena
+  - name: tes_arena
+    tag: arena
