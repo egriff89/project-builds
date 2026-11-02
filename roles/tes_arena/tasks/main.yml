@@ -62,3 +62,9 @@
     src: options-changes.txt.j2
     dest: "{{ tes_arena_dirs.config }}/options/options-changes.txt"
     mode: "0644"
+
+- name: Create desktop file
+  ansible.builtin.template:
+    src: OpenTESArena.desktop.j2
+    dest: "{{ user_data_dir }}/applications/OpenTESArena.desktop"
+    mode: "0644"
