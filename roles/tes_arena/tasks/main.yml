@@ -20,10 +20,10 @@
     tes_arena_dirs:
       repo: "{{ user_project_dir }}/repos/OpenTESArena"
       config: "{{ user_config_dir }}/OpenTESArena"
-    tes_arena_data_paths:
-      - data/ARENACD
-      - data/ARENA
-      - "{{ user_dir }}/Games/The Elder Scrolls/Arena Rebuilt/Arena"
+      data:
+        - data/ARENACD
+        - data/ARENA
+        - "{{ user_dir }}/Games/The Elder Scrolls/Arena Rebuilt/Arena"
 
 - name: Clone repository
   ansible.builtin.git:
@@ -32,6 +32,7 @@
     single_branch: true
     version: main
     depth: 1
+    force: true
 
 - name: Check for build directory
   ansible.builtin.stat:
