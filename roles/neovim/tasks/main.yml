@@ -18,6 +18,7 @@
     single_branch: true
     version: master
     depth: 1
+    force: true
   notify:
     - Build
     - Install
