@@ -1,32 +1,48 @@
 ---
+# Common variables
+user_dir: "{{ ansible_facts['user_dir'] }}"
+user_config_dir: "{{ ansible_facts['user_dir'] }}/.config"
+user_data_dir: "{{ ansible_facts['user_dir'] }}/.local/share"
+user_project_dir: "{{ ansible_facts['user_dir'] }}/Projects"
+nproc: "{{ ansible_facts['processor_nproc'] }}"
+
 roles_list:
   # C3 Programming Language- https://github.com/c3lang/c3c
   - name: c3
     tag: c3
+
   # DWProton - https://dawn.wine/dawn-winery/dwproton
   - name: dwproton
     tag: dwp
+
   # jank Programming Language- https://github.com/jank-lang/jank
   - name: jank
     tag: jank
+
   # Neovim - https://github.com/neovim/neovim
   - name: neovim
     tag: nvim
+
   # Odin Programming Language- https://github.com/odin-lang/odin
   - name: odin
     tag: odin
+
   # OpenSSL - https://github.com/openssl/openssl
   - name: openssl
     tag: openssl
+
   # Scheme LSP Server - https://codeberg.org/rgherdt/scheme-lsp-server
   - name: guile_lsp
     tag: guile
+
   # AnyPS5 - https://github.com/boykopovar/AnyPS5
   - name: anyps5
     tag: anyps5
+
   # Media Preservation Frontend - https://github.com/SabreTools/MPF
   - name: mpf
     tag: mpf
+
   # OpenTESArena - https://github.com/afritz1/OpenTESArena
   - name: tes_arena
     tag: arena
