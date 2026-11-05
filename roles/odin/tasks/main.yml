@@ -13,6 +13,7 @@
     dest: "{{ user_data_dir }}/Odin"
     version: master
     depth: 1
+    force: true
   notify:
     - Build Odin
     - Symlink Odin

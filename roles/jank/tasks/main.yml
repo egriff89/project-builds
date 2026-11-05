@@ -44,6 +44,7 @@
     dest: "{{ jank_dirs.root }}"
     version: main
     depth: 1
+    force: true
   register: jank_clone
 
 - name: Create build directory
