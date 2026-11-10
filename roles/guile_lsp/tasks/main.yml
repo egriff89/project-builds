@@ -46,30 +46,26 @@
     cmd: autoreconf -f -i
   changed_when: false
 
-- name: Configure
-  ansible.builtin.command:
-    chdir: "{{ guile_lsp_repo }}/guile"
-    cmd: "./configure --prefix={{ guile_lsp_prefix }}"
+- name: Configure, build, install
   environment:
     GUILE_LOAD_PATH: "{{ guile_lsp_prefix }}/share/guile/site/3.0"
     GUILE_LOAD_COMPILED_PATH: "{{ guile_lsp_prefix }}/lib/guile/3.0/site-ccache"
-  changed_when: false
+  block:
+    - name: Configure
+      ansible.builtin.command:
+        chdir: "{{ guile_lsp_repo }}/guile"
+        cmd: "./configure --prefix={{ guile_lsp_prefix }}"
+      changed_when: false
 
-- name: Build
-  community.general.make:
-    chdir: "{{ guile_lsp_repo }}/guile"
-  environment:
-    GUILE_LOAD_PATH: "{{ guile_lsp_prefix }}/share/guile/site/3.0"
-    GUILE_LOAD_COMPILED_PATH: "{{ guile_lsp_prefix }}/lib/guile/3.0/site-ccache"
+    - name: Build
+      community.general.make:
+        chdir: "{{ guile_lsp_repo }}/guile"
 
-- name: Install
-  community.general.make:
-    chdir: "{{ guile_lsp_repo }}/guile"
-    target: install
-  environment:
-    GUILE_LOAD_PATH: "{{ guile_lsp_prefix }}/share/guile/site/3.0"
-    GUILE_LOAD_COMPILED_PATH: "{{ guile_lsp_prefix }}/lib/guile/3.0/site-ccache"
-  changed_when: false
+    - name: Install
+      community.general.make:
+        chdir: "{{ guile_lsp_repo }}/guile"
+        target: install
+      changed_when: false
 
 - name: Include shell config tasks
   ansible.builtin.include_tasks: config_shell.yml
