@@ -71,10 +71,6 @@
         path: "{{ c3_binary }}"
       register: c3_binary_stat
 
-    - name: Import LSP tasks
-      ansible.builtin.include_tasks: lsp.yml
-      when: c3_binary_stat.stat.exists
-
     - name: Clone repo
       ansible.builtin.git:
         repo: "https://github.com/tonis2/lsp"
