@@ -11,35 +11,91 @@
 
 - name: Set facts
   ansible.builtin.set_fact:
-    c3_dir: "{{ user_data_dir }}/c3c"
-    c3_build_dir: "{{ user_data_dir }}/c3c/build"
+    c3_dir: "{{ user_project_dir }}/repos/c3c"
+    c3_build_dir: "{{ user_project_dir }}/repos/c3c/build"
     c3_lsp_dir: "{{ user_project_dir }}/repos/c3-lsp"
     c3_binary: "{{ user_dir }}/.local/bin/c3c"
+    c3_lsp_binary: "{{ user_dir }}/.local/bin/c3-lsp"
 
-- name: Clone the repo
-  ansible.builtin.git:
-    repo: "https://github.com/c3lang/c3c"
-    dest: "{{ c3_dir }}"
-    version: master
-    depth: 1
-    force: true
-  notify:
-    - Configure CMake
-    - Build compiler
-    - Symlink compiler
+- name: Uninstall
+  ansible.builtin.include_tasks: uninstall.yml
+  when: "'rm' in ansible_run_tags"
 
-- name: Check for build dir
-  ansible.builtin.stat:
-    dest: "{{ c3_build_dir }}"
-  register: c3_build
+- name: Compiler tasks
+  when: "'rm' not in ansible_run_tags"
+  block:
+    - name: Clone the repo
+      ansible.builtin.git:
+        repo: "https://github.com/c3lang/c3c"
+        dest: "{{ c3_dir }}"
+        version: master
+        depth: 1
+        force: true
 
-- name: Create build dir
-  ansible.builtin.file:
-    dest: "{{ c3_build_dir }}"
-    state: directory
-    mode: "0755"
-  when: not c3_build.stat.exists
+    - name: Check for build dir
+      ansible.builtin.stat:
+        dest: "{{ c3_build_dir }}"
+      register: c3_build
 
-- name: Import LSP tasks
-  ansible.builtin.include_tasks: lsp.yml
+    - name: Create build dir
+      ansible.builtin.file:
+        dest: "{{ c3_build_dir }}"
+        state: directory
+        mode: "0755"
+      when: not c3_build.stat.exists
+
+    - name: Configure CMake
+      ansible.builtin.command:
+        cmd: cmake -B build -S . -DC3_FETCH_LLVM=ON -DCMAKE_BUILD_TYPE=Release
+        chdir: "{{ c3_dir }}"
+      changed_when: true
+
+    - name: Build compiler
+      community.general.make:
+        chdir: "{{ c3_build_dir }}"
+        jobs: "{{ nproc // 2 }}"
+        target: all
+
+    - name: Symlink compiler
+      ansible.builtin.file:
+        src: "{{ c3_build_dir }}/c3c"
+        dest: "{{ c3_binary }}"
+        state: link
+        force: true
+
+- name: LSP tasks
   when: "'lsp' in ansible_run_tags"
+  block:
+    - name: Verify compiler exists
+      ansible.builtin.stat:
+        path: "{{ c3_binary }}"
+      register: c3_binary_stat
+
+    - name: Import LSP tasks
+      ansible.builtin.include_tasks: lsp.yml
+      when: c3_binary_stat.stat.exists
+
+    - name: Clone repo
+      ansible.builtin.git:
+        repo: "https://github.com/tonis2/lsp"
+        dest: "{{ c3_lsp_dir }}"
+        version: main
+        depth: 1
+        force: true
+      register: c3_lsp_clone
+      when: c3_binary_stat.stat.exists
+
+    - name: Build LSP
+      ansible.builtin.command:
+        cmd: "{{ c3_binary }} build lsp"
+        chdir: "{{ c3_lsp_dir }}"
+      changed_when: true
+      when: c3_binary_stat.stat.exists
+
+    - name: Symlink C3 LSP
+      ansible.builtin.file:
+        dest: "{{ c3_lsp_binary }}"
+        src: "{{ c3_lsp_dir }}/build/lsp"
+        state: link
+        force: true
+      when: c3_binary_stat.stat.exists

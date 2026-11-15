@@ -1,0 +1,20 @@
+---
+- name: Uninstall Compiler
+  ansible.builtin.file:
+    path: "{{ c3_dir }}"
+    state: absent
+
+- name: Remove compiler Symlink
+  ansible.builtin.file:
+    path: "{{ c3_binary }}"
+    state: absent
+
+- name: Uninstall LSP
+  ansible.builtin.file:
+    path: "{{ c3_lsp_dir }}"
+    state: absent
+
+- name: Remove LSP Symlink
+  ansible.builtin.file:
+    path: "{{ c3_lsp_binary }}"
+    state: absent
